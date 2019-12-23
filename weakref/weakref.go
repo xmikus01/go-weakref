@@ -17,11 +17,20 @@ type WeakRef struct {
 
 // NewWeakRef -- create a new WeakRef from target object/interface{}
 func NewWeakRef(v interface{}) *WeakRef {
+	return NewWeakRefWithFinalizer(v, nil)
+}
+	
+// NewWeakRefWithFinalizer -- create a new WeakRef from target object/interface{}
+// and optional finalizer func.
+func NewWeakRefWithFinalizer(v interface{}, finalizer func()) *WeakRef {
 	i := (*[2]uintptr)(unsafe.Pointer(&v))
 	w := &WeakRef{^i[0], ^i[1]}
 	runtime.SetFinalizer((*uintptr)(unsafe.Pointer(&i[1])), func(_ *uintptr) {
 		atomic.StoreUintptr(&w.d, uintptr(0))
 		w.t = uintptr(0)
+		if finalizer {
+			finalizer()
+		}
 	})
 	return w
 }
